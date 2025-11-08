@@ -10,4 +10,5 @@ router.use(authMiddleware);
 router.get('/:id/ocr', getDocumentOcr);
 router.patch('/:id/verify', verifyDocument);
 
+
 export default router;

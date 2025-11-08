@@ -30,6 +30,7 @@ export const getDocumentOcr = async (req: Request, res: Response) => {
       ocrStatus: document.ocrStatus,
       rawText: document.rawText,
       parsedFields: document.parsedFields,
+
       verifiedFields: document.verifiedFields,
       isVerified: document.isVerified,
     });
@@ -38,7 +39,6 @@ export const getDocumentOcr = async (req: Request, res: Response) => {
     return res.status(500).json({ message: 'Unable to fetch document OCR data' });
   }
 };
-
 export const verifyDocument = async (req: Request, res: Response) => {
   if (!req.user) {
     return res.status(401).json({ message: 'Unauthorized' });

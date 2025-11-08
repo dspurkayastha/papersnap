@@ -8,6 +8,7 @@ import CaseDetailScreen from '../screens/CaseDetailScreen';
 import CaptureUploadScreen from '../screens/CaptureUploadScreen';
 import DocumentReviewScreen from '../screens/DocumentReviewScreen';
 
+
 export type AppStackParamList = {
   CaseList: undefined;
   CaseDetail: { caseId: string };
@@ -45,6 +46,7 @@ const AppNavigator: React.FC = () => {
         component={DocumentReviewScreen}
         options={{ title: 'Review Document' }}
       />
+
     </AppStack.Navigator>
   );
 };
