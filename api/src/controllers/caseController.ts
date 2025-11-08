@@ -1,6 +1,7 @@
 // src/controllers/caseController.ts
 import { Request, Response } from 'express';
 import { PrismaClient, DocumentType, OcrStatus } from '@prisma/client';
+import { requestOcrAnalysis } from '../services/ocrClient';
 
 const prisma = new PrismaClient();
 
@@ -101,6 +102,10 @@ export const uploadDocument = async (req: Request, res: Response) => {
         filePath: file.path,
         ocrStatus: OcrStatus.PENDING,
       },
+    });
+
+    requestOcrAnalysis(document.id, file.path).catch((error) => {
+      console.error('OCR processing error:', error);
     });
 
     return res.status(201).json(document);
