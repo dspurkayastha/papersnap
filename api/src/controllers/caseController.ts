@@ -56,7 +56,17 @@ export const getCaseById = async (req: Request, res: Response) => {
         userId: req.user.id,
       },
       include: {
-        documents: true,
+        documents: {
+          orderBy: { createdAt: 'desc' },
+          select: {
+            id: true,
+            type: true,
+            ocrStatus: true,
+            createdAt: true,
+            isVerified: true,
+            verifiedFields: true,
+          },
+        },
       },
     });
 

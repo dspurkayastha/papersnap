@@ -9,6 +9,8 @@ type Document = {
   id: string;
   type: string;
   ocrStatus: 'PENDING' | 'COMPLETED' | 'FAILED';
+  isVerified: boolean;
+  verifiedFields?: Record<string, unknown> | null;
 };
 
 type CaseDetail = {
@@ -47,13 +49,23 @@ const CaseDetailScreen: React.FC<Props> = ({ route, navigation }) => {
 
   const handleViewOcr = async (documentId: string) => {
     try {
-      const response = await api.get<{ id: string; ocrStatus: string; rawText?: string }>(`/documents/${documentId}/ocr`);
+      const response = await api.get<{
+        id: string;
+        ocrStatus: string;
+        rawText?: string;
+        parsedFields?: any;
+        verifiedFields?: any;
+        isVerified?: boolean;
+      }>(`/documents/${documentId}/ocr`);
+
       const { ocrStatus, rawText } = response.data;
       let message = ocrStatus;
+
       if (ocrStatus === 'COMPLETED') {
         const text = rawText ? rawText.slice(0, 300) : 'No raw text available.';
         message = `${ocrStatus}\n\n${text}${rawText && rawText.length > 300 ? '...' : ''}`;
       }
+
       Alert.alert('OCR Status', message);
     } catch (error: any) {
       Alert.alert('Error', error?.response?.data?.message || 'Unable to fetch OCR results.');
@@ -76,27 +88,70 @@ const CaseDetailScreen: React.FC<Props> = ({ route, navigation }) => {
       {caseDetail ? (
         <View>
           <Text style={styles.title}>{caseDetail.diagnosis || 'Untitled Case'}</Text>
-          {caseDetail.surgeryDate ? (
-            <Text style={styles.subtitle}>Surgery Date: {new Date(caseDetail.surgeryDate).toDateString()}</Text>
-          ) : null}
-          {caseDetail.procedure ? <Text style={styles.subtitle}>Procedure: {caseDetail.procedure}</Text> : null}
-          {caseDetail.surgeon ? <Text style={styles.subtitle}>Surgeon: {caseDetail.surgeon}</Text> : null}
 
-          <TouchableOpacity style={styles.addButton} onPress={() => navigation.navigate('CaptureUpload', { caseId })}>
+          {caseDetail.surgeryDate ? (
+            <Text style={styles.subtitle}>
+              Surgery Date: {new Date(caseDetail.surgeryDate).toDateString()}
+            </Text>
+          ) : null}
+
+          {caseDetail.procedure ? (
+            <Text style={styles.subtitle}>Procedure: {caseDetail.procedure}</Text>
+          ) : null}
+
+          {caseDetail.surgeon ? (
+            <Text style={styles.subtitle}>Surgeon: {caseDetail.surgeon}</Text>
+          ) : null}
+
+          <TouchableOpacity
+            style={styles.addButton}
+            onPress={() => navigation.navigate('CaptureUpload', { caseId })}
+          >
             <Text style={styles.addButtonText}>Add Document</Text>
           </TouchableOpacity>
 
           <Text style={styles.sectionTitle}>Documents</Text>
+
           {caseDetail.documents.length === 0 ? (
             <Text>No documents uploaded yet.</Text>
           ) : (
             caseDetail.documents.map((doc) => (
               <View key={doc.id} style={styles.documentCard}>
-                <Text style={styles.documentTitle}>{doc.type}</Text>
-                <Text style={[styles.documentStatus, statusStyle(doc.ocrStatus)]}>{doc.ocrStatus}</Text>
-                <TouchableOpacity style={styles.ocrButton} onPress={() => handleViewOcr(doc.id)}>
-                  <Text style={styles.ocrButtonText}>View OCR</Text>
-                </TouchableOpacity>
+                <View style={styles.documentHeader}>
+                  <Text style={styles.documentTitle}>{doc.type}</Text>
+                  {doc.isVerified ? (
+                    <Text style={styles.verifiedBadge}>Verified</Text>
+                  ) : null}
+                </View>
+
+                <Text style={[styles.documentStatus, statusStyle(doc.ocrStatus)]}>
+                  {doc.ocrStatus}
+                </Text>
+
+                <View style={styles.documentActions}>
+                  <TouchableOpacity
+                    style={styles.ocrButton}
+                    onPress={() => handleViewOcr(doc.id)}
+                  >
+                    <Text style={styles.ocrButtonText}>View OCR</Text>
+                  </TouchableOpacity>
+
+                  {doc.ocrStatus === 'COMPLETED' && caseDetail && (
+                    <TouchableOpacity
+                      style={[styles.ocrButton, styles.reviewButton]}
+                      onPress={() =>
+                        navigation.navigate('DocumentReview', {
+                          documentId: doc.id,
+                          caseId: caseDetail.id,
+                        })
+                      }
+                    >
+                      <Text style={styles.reviewButtonText}>
+                        {doc.isVerified ? 'Edit Review' : 'Review'}
+                      </Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
               </View>
             ))
           )}
@@ -145,8 +200,22 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     marginBottom: 12,
   },
+  documentHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
   documentTitle: {
     fontSize: 16,
+    fontWeight: '600',
+  },
+  verifiedBadge: {
+    backgroundColor: '#34C759',
+    color: '#fff',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+    fontSize: 12,
     fontWeight: '600',
   },
   documentStatus: {
@@ -162,6 +231,10 @@ const styles = StyleSheet.create({
   statusFailed: {
     color: '#FF3B30',
   },
+  documentActions: {
+    flexDirection: 'row',
+    marginTop: 8,
+  },
   ocrButton: {
     marginTop: 8,
     alignSelf: 'flex-start',
@@ -169,8 +242,16 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     borderRadius: 6,
     backgroundColor: '#5856D6',
+    marginRight: 8,
   },
   ocrButtonText: {
+    color: '#fff',
+    fontWeight: '600',
+  },
+  reviewButton: {
+    backgroundColor: '#34C759',
+  },
+  reviewButtonText: {
     color: '#fff',
     fontWeight: '600',
   },
