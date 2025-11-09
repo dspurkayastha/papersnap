@@ -1,3 +1,4 @@
+// mobile/src/screens/DocumentReviewScreen.tsx
 import React, { useCallback, useEffect, useState } from 'react';
 import {
   View,
@@ -29,11 +30,14 @@ type OcrResponse = {
 
 const DocumentReviewScreen: React.FC<Props> = ({ route, navigation }) => {
   const { documentId } = route.params;
+
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+
   const [ocrStatus, setOcrStatus] = useState<OcrStatus>('PENDING');
   const [rawText, setRawText] = useState('');
   const [schemaType, setSchemaType] = useState<string | null>(null);
+
   const [surgeryDate, setSurgeryDate] = useState('');
   const [patientAge, setPatientAge] = useState('');
   const [patientSex, setPatientSex] = useState('');
@@ -49,13 +53,15 @@ const DocumentReviewScreen: React.FC<Props> = ({ route, navigation }) => {
     verified?: Record<string, any> | null,
     parsed?: Record<string, any> | null
   ) => {
+    // 1) Prefer verified
     if (verified && verified[key] !== undefined && verified[key] !== null) {
       return verified[key];
     }
 
+    // 2) Fallback to parsed; support { value: ... } or plain
     const parsedCandidate = parsed ? parsed[key] : undefined;
     if (parsedCandidate && typeof parsedCandidate === 'object' && 'value' in parsedCandidate) {
-      return parsedCandidate.value;
+      return (parsedCandidate as any).value;
     }
 
     return parsedCandidate ?? '';
@@ -66,6 +72,7 @@ const DocumentReviewScreen: React.FC<Props> = ({ route, navigation }) => {
       setLoading(true);
       const response = await api.get<OcrResponse>(`/documents/${documentId}/ocr`);
       const data = response.data;
+
       setOcrStatus(data.ocrStatus);
       setRawText(data.rawText ?? '');
       setSchemaType(data.schemaType ?? null);
@@ -78,7 +85,9 @@ const DocumentReviewScreen: React.FC<Props> = ({ route, navigation }) => {
 
       const patientAgeValue = resolveFieldValue('patientAge', verified, parsed);
       setPatientAge(
-        patientAgeValue !== undefined && patientAgeValue !== null && patientAgeValue !== ''
+        patientAgeValue !== undefined &&
+          patientAgeValue !== null &&
+          patientAgeValue !== ''
           ? String(patientAgeValue)
           : ''
       );
@@ -161,7 +170,9 @@ const DocumentReviewScreen: React.FC<Props> = ({ route, navigation }) => {
     try {
       setSaving(true);
       await api.patch(`/documents/${documentId}/verify`, payload);
-      Alert.alert('Success', 'Document verified.', [{ text: 'OK', onPress: () => navigation.goBack() }]);
+      Alert.alert('Success', 'Document verified.', [
+        { text: 'OK', onPress: () => navigation.goBack() },
+      ]);
     } catch (error: any) {
       Alert.alert('Error', error?.response?.data?.message || 'Failed to save verification.');
     } finally {
@@ -186,7 +197,8 @@ const DocumentReviewScreen: React.FC<Props> = ({ route, navigation }) => {
     );
   }
 
-  const allowStructuredReview = schemaType === 'surgery_note_v1' || schemaType === null;
+  const allowStructuredReview =
+    schemaType === 'surgery_note_v1' || schemaType === null;
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
@@ -204,6 +216,7 @@ const DocumentReviewScreen: React.FC<Props> = ({ route, navigation }) => {
       ) : null}
 
       <Text style={styles.sectionTitle}>Verify Fields</Text>
+
       <TextInput
         style={styles.input}
         placeholder="Surgery Date (YYYY-MM-DD)"
@@ -256,7 +269,11 @@ const DocumentReviewScreen: React.FC<Props> = ({ route, navigation }) => {
       </View>
 
       <View style={styles.buttonContainer}>
-        <Button title={saving ? 'Saving...' : 'Save Verification'} onPress={handleSave} disabled={saving} />
+        <Button
+          title={saving ? 'Saving...' : 'Save Verification'}
+          onPress={handleSave}
+          disabled={saving}
+        />
       </View>
 
       {rawText ? (
@@ -338,3 +355,4 @@ const styles = StyleSheet.create({
 });
 
 export default DocumentReviewScreen;
+

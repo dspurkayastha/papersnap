@@ -1,5 +1,14 @@
+// mobile/src/screens/CaseListScreen.tsx
 import React, { useCallback, useLayoutEffect, useState } from 'react';
-import { View, Text, FlatList, StyleSheet, TouchableOpacity, RefreshControl, Alert } from 'react-native';
+import {
+  View,
+  Text,
+  FlatList,
+  StyleSheet,
+  TouchableOpacity,
+  RefreshControl,
+  Alert,
+} from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useFocusEffect } from '@react-navigation/native';
 import { AppStackParamList } from '../navigation/AppNavigator';
@@ -78,9 +87,16 @@ const CaseListScreen: React.FC<Props> = ({ navigation }) => {
   const renderItem = ({ item }: { item: Case }) => {
     const subtitle = item.diagnosis || '(no diagnosis yet)';
     return (
-      <TouchableOpacity style={styles.card} onPress={() => navigation.navigate('CaseDetail', { caseId: item.id })}>
+      <TouchableOpacity
+        style={styles.card}
+        onPress={() => navigation.navigate('CaseDetail', { caseId: item.id })}
+      >
         <Text style={styles.cardTitle}>{subtitle}</Text>
-        {item.surgeryDate ? <Text style={styles.cardSubtitle}>{new Date(item.surgeryDate).toDateString()}</Text> : null}
+        {item.surgeryDate ? (
+          <Text style={styles.cardSubtitle}>
+            {new Date(item.surgeryDate).toDateString()}
+          </Text>
+        ) : null}
         <Text style={styles.cardId}>{item.id}</Text>
       </TouchableOpacity>
     );
@@ -93,8 +109,12 @@ const CaseListScreen: React.FC<Props> = ({ navigation }) => {
         keyExtractor={(item) => item.id}
         renderItem={renderItem}
         contentContainerStyle={cases.length === 0 ? styles.emptyContainer : undefined}
-        ListEmptyComponent={<Text style={styles.emptyText}>No cases yet. Create one to get started.</Text>}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+        ListEmptyComponent={
+          <Text style={styles.emptyText}>No cases yet. Create one to get started.</Text>
+        }
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        }
       />
     </View>
   );

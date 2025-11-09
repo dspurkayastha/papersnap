@@ -25,7 +25,11 @@ const markFailed = async (documentId: string) => {
   }
 };
 
-export const requestOcrAnalysis = async (documentId: string, filePath: string): Promise<void> => {
+export const requestOcrAnalysis = async (
+  documentId: string,
+  filePath: string
+): Promise<void> => {
+  // Ensure the file is actually reachable from the API container’s perspective
   try {
     await fs.access(filePath);
   } catch (fsError) {
@@ -37,16 +41,21 @@ export const requestOcrAnalysis = async (documentId: string, filePath: string): 
   try {
     const response = await axios.post<OcrWorkerResponse>(
       `${OCR_WORKER_URL}/analyze`,
-      { documentId, file_path: filePath },
+      {
+        documentId,
+        file_path: filePath,
+      },
       {
         timeout: 30_000,
       }
     );
 
     const data = response.data ?? {};
+
     const parsedFieldsValue =
       data.parsedFields === undefined ? undefined : (data.parsedFields ?? Prisma.JsonNull);
-    const ocrMetaValue = data.ocrMeta === undefined ? undefined : (data.ocrMeta ?? Prisma.JsonNull);
+    const ocrMetaValue =
+      data.ocrMeta === undefined ? undefined : (data.ocrMeta ?? Prisma.JsonNull);
 
     const updateData: Prisma.DocumentUpdateInput = {
       ocrStatus: OcrStatus.COMPLETED,
@@ -71,3 +80,4 @@ export const requestOcrAnalysis = async (documentId: string, filePath: string): 
     await markFailed(documentId);
   }
 };
+

@@ -132,8 +132,13 @@ export const verifyDocument = async (req: Request, res: Response) => {
       return res.status(400).json({ message: 'No valid fields provided for verification' });
     }
 
-    const existingVerified = (document.verifiedFields ?? {}) as Record<string, unknown>;
-    const mergedVerified = { ...existingVerified, ...verifiedUpdates };
+    const existingVerified =
+      (document.verifiedFields ?? {}) as Record<string, unknown>;
+
+    const mergedVerified: Record<string, unknown> = {
+      ...existingVerified,
+      ...verifiedUpdates,
+    };
 
     const updatedDocument = await prisma.document.update({
       where: { id: document.id },
