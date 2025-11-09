@@ -25,7 +25,11 @@ const markFailed = async (documentId: string) => {
   }
 };
 
-export const requestOcrAnalysis = async (documentId: string, filePath: string): Promise<void> => {
+export const requestOcrAnalysis = async (
+  documentId: string,
+  filePath: string
+): Promise<void> => {
+  // Ensure the file is actually reachable from the worker's perspective
   try {
     await fs.access(filePath);
   } catch (fsError) {
@@ -37,29 +41,32 @@ export const requestOcrAnalysis = async (documentId: string, filePath: string): 
   try {
     const response = await axios.post<OcrWorkerResponse>(
       `${OCR_WORKER_URL}/analyze`,
-      { documentId, file_path: filePath },
+      {
+        documentId,
+        file_path: filePath,
+      },
       {
         timeout: 30_000,
       }
     );
 
     const data = response.data ?? {};
-    const parsedFieldsValue =
-      data.parsedFields === undefined ? undefined : (data.parsedFields ?? Prisma.JsonNull);
-    const ocrMetaValue = data.ocrMeta === undefined ? undefined : (data.ocrMeta ?? Prisma.JsonNull);
 
     const updateData: Prisma.DocumentUpdateInput = {
       ocrStatus: OcrStatus.COMPLETED,
       rawText: data.rawText ?? null,
-      schemaType: data.schemaType ?? null,
+      // Optional flexible schema support if present in the Prisma model
+      schemaType: (data.schemaType ?? null) as any,
     };
 
-    if (parsedFieldsValue !== undefined) {
-      updateData.parsedFields = parsedFieldsValue as Prisma.InputJsonValue;
+    if (data.parsedFields !== undefined) {
+      updateData.parsedFields = (data.parsedFields ??
+        Prisma.JsonNull) as Prisma.InputJsonValue;
     }
 
-    if (ocrMetaValue !== undefined) {
-      updateData.ocrMeta = ocrMetaValue as Prisma.InputJsonValue;
+    if (data.ocrMeta !== undefined) {
+      updateData.ocrMeta = (data.ocrMeta ??
+        Prisma.JsonNull) as Prisma.InputJsonValue;
     }
 
     await prisma.document.update({

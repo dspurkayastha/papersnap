@@ -56,14 +56,29 @@ const CaseDetailScreen: React.FC<Props> = ({ route, navigation }) => {
         ocrStatus: string;
         rawText?: string;
         schemaType?: string | null;
+        parsedFields?: Record<string, unknown> | null;
+        verifiedFields?: Record<string, unknown> | null;
+        isVerified?: boolean;
       }>(`/documents/${documentId}/ocr`);
-      const { ocrStatus, rawText, schemaType } = response.data;
+
+      const { ocrStatus, rawText, schemaType, parsedFields } = response.data;
+
       const header = schemaType ? `${schemaType} — ${ocrStatus}` : ocrStatus;
-      let message = header;
+      let body = '';
+
       if (ocrStatus === 'COMPLETED') {
-        const text = rawText ? rawText.slice(0, 300) : 'No raw text available.';
-        message = `${header}\n\n${text}${rawText && rawText.length > 300 ? '...' : ''}`;
+        const preview = rawText ? rawText.slice(0, 300) : 'No raw text available.';
+        body += `${preview}${rawText && rawText.length > 300 ? '...' : ''}`;
+
+        if (parsedFields && Object.keys(parsedFields).length > 0) {
+          body += '\n\nParsed fields:\n';
+          for (const [key, value] of Object.entries(parsedFields)) {
+            body += `- ${key}: ${value as string}\n`;
+          }
+        }
       }
+
+      const message = body ? `${header}\n\n${body}` : header;
       Alert.alert('OCR Status', message);
     } catch (error: any) {
       Alert.alert('Error', error?.response?.data?.message || 'Unable to fetch OCR results.');
@@ -86,17 +101,30 @@ const CaseDetailScreen: React.FC<Props> = ({ route, navigation }) => {
       {caseDetail ? (
         <View>
           <Text style={styles.title}>{caseDetail.diagnosis || 'Untitled Case'}</Text>
-          {caseDetail.surgeryDate ? (
-            <Text style={styles.subtitle}>Surgery Date: {new Date(caseDetail.surgeryDate).toDateString()}</Text>
-          ) : null}
-          {caseDetail.procedure ? <Text style={styles.subtitle}>Procedure: {caseDetail.procedure}</Text> : null}
-          {caseDetail.surgeon ? <Text style={styles.subtitle}>Surgeon: {caseDetail.surgeon}</Text> : null}
 
-          <TouchableOpacity style={styles.addButton} onPress={() => navigation.navigate('CaptureUpload', { caseId })}>
+          {caseDetail.surgeryDate ? (
+            <Text style={styles.subtitle}>
+              Surgery Date: {new Date(caseDetail.surgeryDate).toDateString()}
+            </Text>
+          ) : null}
+
+          {caseDetail.procedure ? (
+            <Text style={styles.subtitle}>Procedure: {caseDetail.procedure}</Text>
+          ) : null}
+
+          {caseDetail.surgeon ? (
+            <Text style={styles.subtitle}>Surgeon: {caseDetail.surgeon}</Text>
+          ) : null}
+
+          <TouchableOpacity
+            style={styles.addButton}
+            onPress={() => navigation.navigate('CaptureUpload', { caseId })}
+          >
             <Text style={styles.addButtonText}>Add Document</Text>
           </TouchableOpacity>
 
           <Text style={styles.sectionTitle}>Documents</Text>
+
           {caseDetail.documents.length === 0 ? (
             <Text>No documents uploaded yet.</Text>
           ) : (
@@ -104,15 +132,28 @@ const CaseDetailScreen: React.FC<Props> = ({ route, navigation }) => {
               <View key={doc.id} style={styles.documentCard}>
                 <View style={styles.documentHeader}>
                   <Text style={styles.documentTitle}>{doc.type}</Text>
-                  {doc.isVerified ? <Text style={styles.verifiedBadge}>Verified</Text> : null}
+                  {doc.isVerified ? (
+                    <Text style={styles.verifiedBadge}>Verified</Text>
+                  ) : null}
                 </View>
-                {doc.schemaType ? <Text style={styles.schemaLabel}>Schema: {doc.schemaType}</Text> : null}
-                <Text style={[styles.documentStatus, statusStyle(doc.ocrStatus)]}>{doc.ocrStatus}</Text>
+
+                {doc.schemaType ? (
+                  <Text style={styles.schemaLabel}>Schema: {doc.schemaType}</Text>
+                ) : null}
+
+                <Text style={[styles.documentStatus, statusStyle(doc.ocrStatus)]}>
+                  {doc.ocrStatus}
+                </Text>
+
                 <View style={styles.documentActions}>
-                  <TouchableOpacity style={styles.ocrButton} onPress={() => handleViewOcr(doc.id)}>
+                  <TouchableOpacity
+                    style={styles.ocrButton}
+                    onPress={() => handleViewOcr(doc.id)}
+                  >
                     <Text style={styles.ocrButtonText}>View OCR</Text>
                   </TouchableOpacity>
-                  {doc.ocrStatus === 'COMPLETED' && caseDetail ? (
+
+                  {doc.ocrStatus === 'COMPLETED' && caseDetail && (
                     <TouchableOpacity
                       style={[styles.ocrButton, styles.reviewButton]}
                       onPress={() =>
@@ -122,9 +163,11 @@ const CaseDetailScreen: React.FC<Props> = ({ route, navigation }) => {
                         })
                       }
                     >
-                      <Text style={styles.reviewButtonText}>{doc.isVerified ? 'Edit Review' : 'Review'}</Text>
+                      <Text style={styles.reviewButtonText}>
+                        {doc.isVerified ? 'Edit Review' : 'Review'}
+                      </Text>
                     </TouchableOpacity>
-                  ) : null}
+                  )}
                 </View>
               </View>
             ))
