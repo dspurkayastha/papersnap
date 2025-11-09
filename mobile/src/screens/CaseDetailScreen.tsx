@@ -11,6 +11,8 @@ type Document = {
   ocrStatus: 'PENDING' | 'COMPLETED' | 'FAILED';
   isVerified: boolean;
   verifiedFields?: Record<string, unknown> | null;
+  schemaType?: string | null;
+  parsedFields?: Record<string, unknown> | null;
 };
 
 type CaseDetail = {
@@ -53,19 +55,30 @@ const CaseDetailScreen: React.FC<Props> = ({ route, navigation }) => {
         id: string;
         ocrStatus: string;
         rawText?: string;
-        parsedFields?: any;
-        verifiedFields?: any;
+        schemaType?: string | null;
+        parsedFields?: Record<string, unknown> | null;
+        verifiedFields?: Record<string, unknown> | null;
         isVerified?: boolean;
       }>(`/documents/${documentId}/ocr`);
 
-      const { ocrStatus, rawText } = response.data;
-      let message = ocrStatus;
+      const { ocrStatus, rawText, schemaType, parsedFields } = response.data;
+
+      const header = schemaType ? `${schemaType} — ${ocrStatus}` : ocrStatus;
+      let body = '';
 
       if (ocrStatus === 'COMPLETED') {
-        const text = rawText ? rawText.slice(0, 300) : 'No raw text available.';
-        message = `${ocrStatus}\n\n${text}${rawText && rawText.length > 300 ? '...' : ''}`;
+        const preview = rawText ? rawText.slice(0, 300) : 'No raw text available.';
+        body += `${preview}${rawText && rawText.length > 300 ? '...' : ''}`;
+
+        if (parsedFields && Object.keys(parsedFields).length > 0) {
+          body += '\n\nParsed fields:\n';
+          for (const [key, value] of Object.entries(parsedFields)) {
+            body += `- ${key}: ${value as string}\n`;
+          }
+        }
       }
 
+      const message = body ? `${header}\n\n${body}` : header;
       Alert.alert('OCR Status', message);
     } catch (error: any) {
       Alert.alert('Error', error?.response?.data?.message || 'Unable to fetch OCR results.');
@@ -123,6 +136,10 @@ const CaseDetailScreen: React.FC<Props> = ({ route, navigation }) => {
                     <Text style={styles.verifiedBadge}>Verified</Text>
                   ) : null}
                 </View>
+
+                {doc.schemaType ? (
+                  <Text style={styles.schemaLabel}>Schema: {doc.schemaType}</Text>
+                ) : null}
 
                 <Text style={[styles.documentStatus, statusStyle(doc.ocrStatus)]}>
                   {doc.ocrStatus}
@@ -208,6 +225,11 @@ const styles = StyleSheet.create({
   documentTitle: {
     fontSize: 16,
     fontWeight: '600',
+  },
+  schemaLabel: {
+    fontSize: 12,
+    color: '#555',
+    marginTop: 4,
   },
   verifiedBadge: {
     backgroundColor: '#34C759',

@@ -1,6 +1,6 @@
 // src/controllers/documentController.ts
 import { Request, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient, Prisma } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
@@ -30,7 +30,9 @@ export const getDocumentOcr = async (req: Request, res: Response) => {
       ocrStatus: document.ocrStatus,
       rawText: document.rawText,
       parsedFields: document.parsedFields,
-
+      // Flexible schema support (if present in the Prisma model)
+      schemaType: (document as any).schemaType ?? null,
+      ocrMeta: (document as any).ocrMeta ?? null,
       verifiedFields: document.verifiedFields,
       isVerified: document.isVerified,
     });
@@ -39,6 +41,7 @@ export const getDocumentOcr = async (req: Request, res: Response) => {
     return res.status(500).json({ message: 'Unable to fetch document OCR data' });
   }
 };
+
 export const verifyDocument = async (req: Request, res: Response) => {
   if (!req.user) {
     return res.status(401).json({ message: 'Unauthorized' });
@@ -130,13 +133,18 @@ export const verifyDocument = async (req: Request, res: Response) => {
       return res.status(400).json({ message: 'No valid fields provided for verification' });
     }
 
-    const existingVerified = (document.verifiedFields ?? {}) as Record<string, unknown>;
-    const mergedVerified = { ...existingVerified, ...verifiedUpdates };
+    const existingVerified =
+      (document.verifiedFields ?? {}) as Record<string, unknown>;
+
+    const mergedVerified: Record<string, unknown> = {
+      ...existingVerified,
+      ...verifiedUpdates,
+    };
 
     const updatedDocument = await prisma.document.update({
       where: { id: document.id },
       data: {
-        verifiedFields: mergedVerified,
+        verifiedFields: mergedVerified as Prisma.InputJsonValue,
         isVerified: true,
       },
       select: {

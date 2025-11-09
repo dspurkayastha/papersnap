@@ -3,3 +3,7 @@ uvicorn[standard]
 python-multipart
 pydantic
 pillow
+requests
+chandra-ocr
+surya-ocr
+google-cloud-vision

@@ -65,6 +65,8 @@ export const getCaseById = async (req: Request, res: Response) => {
             createdAt: true,
             isVerified: true,
             verifiedFields: true,
+            schemaType: true,
+            parsedFields: true,
           },
         },
       },

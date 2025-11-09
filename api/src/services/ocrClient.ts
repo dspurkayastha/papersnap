@@ -1,52 +1,80 @@
 // src/services/ocrClient.ts
 import axios from 'axios';
-import FormData from 'form-data';
-import fs from 'fs';
-import path from 'path';
-import { PrismaClient, OcrStatus } from '@prisma/client';
+import fs from 'fs/promises';
+import { PrismaClient, OcrStatus, Prisma } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
 const OCR_WORKER_URL = process.env.OCR_WORKER_URL ?? 'http://localhost:8001';
 
-export const requestOcrAnalysis = async (documentId: string, filePath: string): Promise<void> => {
-  const fileStream = fs.createReadStream(filePath);
-  const formData = new FormData();
-  formData.append('documentId', documentId);
-  formData.append('file', fileStream, path.basename(filePath));
+export type OcrWorkerResponse = {
+  rawText?: string | null;
+  schemaType?: string | null;
+  parsedFields?: Record<string, unknown> | null;
+  ocrMeta?: Record<string, unknown> | null;
+};
+
+const markFailed = async (documentId: string) => {
+  try {
+    await prisma.document.update({
+      where: { id: documentId },
+      data: { ocrStatus: OcrStatus.FAILED },
+    });
+  } catch (updateError) {
+    console.error('Failed to mark document OCR status as FAILED:', updateError);
+  }
+};
+
+export const requestOcrAnalysis = async (
+  documentId: string,
+  filePath: string
+): Promise<void> => {
+  // Ensure the file is actually reachable from the worker's perspective
+  try {
+    await fs.access(filePath);
+  } catch (fsError) {
+    console.error('OCR worker cannot access file path:', filePath, fsError);
+    await markFailed(documentId);
+    return;
+  }
 
   try {
-    const response = await axios.post(`${OCR_WORKER_URL}/analyze`, formData, {
-      headers: formData.getHeaders(),
-      maxBodyLength: Infinity,
-      maxContentLength: Infinity,
-      timeout: 30_000,
-    });
+    const response = await axios.post<OcrWorkerResponse>(
+      `${OCR_WORKER_URL}/analyze`,
+      {
+        documentId,
+        file_path: filePath,
+      },
+      {
+        timeout: 30_000,
+      }
+    );
 
-    const { rawText = null, fields = null } = response.data ?? {};
+    const data = response.data ?? {};
+
+    const updateData: Prisma.DocumentUpdateInput = {
+      ocrStatus: OcrStatus.COMPLETED,
+      rawText: data.rawText ?? null,
+      // Optional flexible schema support if present in the Prisma model
+      schemaType: (data.schemaType ?? null) as any,
+    };
+
+    if (data.parsedFields !== undefined) {
+      updateData.parsedFields = (data.parsedFields ??
+        Prisma.JsonNull) as Prisma.InputJsonValue;
+    }
+
+    if (data.ocrMeta !== undefined) {
+      updateData.ocrMeta = (data.ocrMeta ??
+        Prisma.JsonNull) as Prisma.InputJsonValue;
+    }
 
     await prisma.document.update({
       where: { id: documentId },
-      data: {
-        ocrStatus: OcrStatus.COMPLETED,
-        rawText,
-        parsedFields: fields,
-      },
+      data: updateData,
     });
   } catch (error) {
     console.error('OCR worker request failed:', error);
-
-    try {
-      await prisma.document.update({
-        where: { id: documentId },
-        data: {
-          ocrStatus: OcrStatus.FAILED,
-        },
-      });
-    } catch (updateError) {
-      console.error('Failed to mark document OCR status as FAILED:', updateError);
-    }
-  } finally {
-    fileStream.destroy();
+    await markFailed(documentId);
   }
 };

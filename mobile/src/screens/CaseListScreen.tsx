@@ -34,22 +34,7 @@ const CaseListScreen: React.FC<Props> = ({ navigation }) => {
     }, [fetchCases])
   );
 
-  useLayoutEffect(() => {
-    navigation.setOptions({
-      headerRight: () => (
-        <TouchableOpacity onPress={handleCreateCase} style={styles.headerButton}>
-          <Text style={styles.headerButtonText}>New Case</Text>
-        </TouchableOpacity>
-      ),
-      headerLeft: () => (
-        <TouchableOpacity onPress={logout} style={styles.headerButton}>
-          <Text style={styles.headerButtonText}>Logout</Text>
-        </TouchableOpacity>
-      ),
-    });
-  }, [navigation, logout]);
-
-  const handleCreateCase = async () => {
+  const handleCreateCase = useCallback(async () => {
     try {
       const response = await api.post<Case>('/cases');
       const newCase = response.data;
@@ -58,7 +43,31 @@ const CaseListScreen: React.FC<Props> = ({ navigation }) => {
     } catch (error: any) {
       Alert.alert('Error', error?.response?.data?.message || 'Unable to create case.');
     }
-  };
+  }, [navigation]);
+
+  const handleOpenSettings = useCallback(() => {
+    navigation.navigate('Settings');
+  }, [navigation]);
+
+  useLayoutEffect(() => {
+    navigation.setOptions({
+      headerRight: () => (
+        <View style={styles.headerActions}>
+          <TouchableOpacity onPress={handleCreateCase} style={styles.headerButton}>
+            <Text style={styles.headerButtonText}>New Case</Text>
+          </TouchableOpacity>
+          <TouchableOpacity onPress={handleOpenSettings} style={styles.headerButton}>
+            <Text style={styles.headerButtonText}>Settings</Text>
+          </TouchableOpacity>
+        </View>
+      ),
+      headerLeft: () => (
+        <TouchableOpacity onPress={logout} style={styles.headerButton}>
+          <Text style={styles.headerButtonText}>Logout</Text>
+        </TouchableOpacity>
+      ),
+    });
+  }, [navigation, logout, handleCreateCase, handleOpenSettings]);
 
   const onRefresh = async () => {
     setRefreshing(true);
@@ -69,9 +78,16 @@ const CaseListScreen: React.FC<Props> = ({ navigation }) => {
   const renderItem = ({ item }: { item: Case }) => {
     const subtitle = item.diagnosis || '(no diagnosis yet)';
     return (
-      <TouchableOpacity style={styles.card} onPress={() => navigation.navigate('CaseDetail', { caseId: item.id })}>
+      <TouchableOpacity
+        style={styles.card}
+        onPress={() => navigation.navigate('CaseDetail', { caseId: item.id })}
+      >
         <Text style={styles.cardTitle}>{subtitle}</Text>
-        {item.surgeryDate ? <Text style={styles.cardSubtitle}>{new Date(item.surgeryDate).toDateString()}</Text> : null}
+        {item.surgeryDate ? (
+          <Text style={styles.cardSubtitle}>
+            {new Date(item.surgeryDate).toDateString()}
+          </Text>
+        ) : null}
         <Text style={styles.cardId}>{item.id}</Text>
       </TouchableOpacity>
     );
@@ -84,8 +100,12 @@ const CaseListScreen: React.FC<Props> = ({ navigation }) => {
         keyExtractor={(item) => item.id}
         renderItem={renderItem}
         contentContainerStyle={cases.length === 0 ? styles.emptyContainer : undefined}
-        ListEmptyComponent={<Text style={styles.emptyText}>No cases yet. Create one to get started.</Text>}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+        ListEmptyComponent={
+          <Text style={styles.emptyText}>No cases yet. Create one to get started.</Text>
+        }
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        }
       />
     </View>
   );
@@ -129,6 +149,10 @@ const styles = StyleSheet.create({
   headerButtonText: {
     color: '#007AFF',
     fontWeight: '600',
+  },
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
 });
 
