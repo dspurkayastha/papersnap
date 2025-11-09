@@ -30,9 +30,8 @@ export const getDocumentOcr = async (req: Request, res: Response) => {
       ocrStatus: document.ocrStatus,
       rawText: document.rawText,
       parsedFields: document.parsedFields,
-      // Flexible schema support (if present in the Prisma model)
-      schemaType: (document as any).schemaType ?? null,
-      ocrMeta: (document as any).ocrMeta ?? null,
+      schemaType: document.schemaType,
+      ocrMeta: document.ocrMeta,
       verifiedFields: document.verifiedFields,
       isVerified: document.isVerified,
     });

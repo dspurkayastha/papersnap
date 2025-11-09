@@ -1,3 +1,4 @@
+// mobile/src/screens/DocumentReviewScreen.tsx
 import React, { useCallback, useEffect, useState } from 'react';
 import {
   View,
@@ -85,8 +86,8 @@ const DocumentReviewScreen: React.FC<Props> = ({ route, navigation }) => {
       const patientAgeValue = resolveFieldValue('patientAge', verified, parsed);
       setPatientAge(
         patientAgeValue !== undefined &&
-        patientAgeValue !== null &&
-        patientAgeValue !== ''
+          patientAgeValue !== null &&
+          patientAgeValue !== ''
           ? String(patientAgeValue)
           : ''
       );
@@ -354,3 +355,4 @@ const styles = StyleSheet.create({
 });
 
 export default DocumentReviewScreen;
+

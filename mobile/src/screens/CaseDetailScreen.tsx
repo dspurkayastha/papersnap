@@ -1,3 +1,4 @@
+// mobile/src/screens/CaseDetailScreen.tsx
 import React, { useCallback, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -53,8 +54,8 @@ const CaseDetailScreen: React.FC<Props> = ({ route, navigation }) => {
     try {
       const response = await api.get<{
         id: string;
-        ocrStatus: string;
-        rawText?: string;
+        ocrStatus: 'PENDING' | 'COMPLETED' | 'FAILED';
+        rawText?: string | null;
         schemaType?: string | null;
         parsedFields?: Record<string, unknown> | null;
         verifiedFields?: Record<string, unknown> | null;
@@ -73,7 +74,7 @@ const CaseDetailScreen: React.FC<Props> = ({ route, navigation }) => {
         if (parsedFields && Object.keys(parsedFields).length > 0) {
           body += '\n\nParsed fields:\n';
           for (const [key, value] of Object.entries(parsedFields)) {
-            body += `- ${key}: ${value as string}\n`;
+            body += `- ${key}: ${typeof value === 'object' ? JSON.stringify(value) : String(value)}\n`;
           }
         }
       }
@@ -280,3 +281,4 @@ const styles = StyleSheet.create({
 });
 
 export default CaseDetailScreen;
+

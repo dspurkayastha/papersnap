@@ -29,7 +29,7 @@ export const requestOcrAnalysis = async (
   documentId: string,
   filePath: string
 ): Promise<void> => {
-  // Ensure the file is actually reachable from the worker's perspective
+  // Ensure the file is actually reachable from the API container’s perspective
   try {
     await fs.access(filePath);
   } catch (fsError) {
@@ -52,21 +52,23 @@ export const requestOcrAnalysis = async (
 
     const data = response.data ?? {};
 
+    const parsedFieldsValue =
+      data.parsedFields === undefined ? undefined : (data.parsedFields ?? Prisma.JsonNull);
+    const ocrMetaValue =
+      data.ocrMeta === undefined ? undefined : (data.ocrMeta ?? Prisma.JsonNull);
+
     const updateData: Prisma.DocumentUpdateInput = {
       ocrStatus: OcrStatus.COMPLETED,
       rawText: data.rawText ?? null,
-      // Optional flexible schema support if present in the Prisma model
-      schemaType: (data.schemaType ?? null) as any,
+      schemaType: data.schemaType ?? null,
     };
 
-    if (data.parsedFields !== undefined) {
-      updateData.parsedFields = (data.parsedFields ??
-        Prisma.JsonNull) as Prisma.InputJsonValue;
+    if (parsedFieldsValue !== undefined) {
+      updateData.parsedFields = parsedFieldsValue as Prisma.InputJsonValue;
     }
 
-    if (data.ocrMeta !== undefined) {
-      updateData.ocrMeta = (data.ocrMeta ??
-        Prisma.JsonNull) as Prisma.InputJsonValue;
+    if (ocrMetaValue !== undefined) {
+      updateData.ocrMeta = ocrMetaValue as Prisma.InputJsonValue;
     }
 
     await prisma.document.update({
@@ -78,3 +80,4 @@ export const requestOcrAnalysis = async (
     await markFailed(documentId);
   }
 };
+

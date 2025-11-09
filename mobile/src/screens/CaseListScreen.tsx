@@ -1,5 +1,14 @@
+// mobile/src/screens/CaseListScreen.tsx
 import React, { useCallback, useLayoutEffect, useState } from 'react';
-import { View, Text, FlatList, StyleSheet, TouchableOpacity, RefreshControl, Alert } from 'react-native';
+import {
+  View,
+  Text,
+  FlatList,
+  StyleSheet,
+  TouchableOpacity,
+  RefreshControl,
+  Alert,
+} from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useFocusEffect } from '@react-navigation/native';
 import { AppStackParamList } from '../navigation/AppNavigator';
